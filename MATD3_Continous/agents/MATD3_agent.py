@@ -169,13 +169,13 @@ class MATD3:
             agent.actor.load_state_dict(data[agent_id])
         return instance
     
-    def save_model(self, timestamp = True):
+    def save_model(self, timestamp = True, save_dir=None):
         _timestamp = timestamp
         for agent_id in self.dim_info.keys():
-            self.agents[agent_id].actor.save_checkpoint(is_target = False, timestamp = _timestamp)
-            self.agents[agent_id].actor_target.save_checkpoint(is_target = True, timestamp = _timestamp)
-            self.agents[agent_id].critic.save_checkpoint(is_target = False, timestamp = _timestamp)
-            self.agents[agent_id].critic_target.save_checkpoint(is_target = True, timestamp = _timestamp)
+            self.agents[agent_id].actor.save_checkpoint(is_target = False, timestamp = _timestamp, save_dir=save_dir)
+            self.agents[agent_id].actor_target.save_checkpoint(is_target = True, timestamp = _timestamp, save_dir=save_dir)
+            self.agents[agent_id].critic.save_checkpoint(is_target = False, timestamp = _timestamp, save_dir=save_dir)
+            self.agents[agent_id].critic_target.save_checkpoint(is_target = True, timestamp = _timestamp, save_dir=save_dir)
 
         agent_id = list(self.dim_info.keys())[0]  # 获取第一个代理的 ID
         agent = self.agents[agent_id]
@@ -184,12 +184,12 @@ class MATD3:
             print(f"Layer: {name}, Shape: {param.shape}, Values: {param.flatten()[:5]}")  # flatten() 展开参数为一维数组
 
 
-    def load_model(self):
+    def load_model(self, load_dir=None):
         for agent_id in self.dim_info.keys():
-            self.agents[agent_id].actor.load_checkpoint(device = self.device, is_target = False, timestamp = self.model_timestamp)
-            self.agents[agent_id].actor_target.load_checkpoint(device = self.device, is_target = True, timestamp = self.model_timestamp)
-            self.agents[agent_id].critic.load_checkpoint(device = self.device, is_target = False, timestamp = self.model_timestamp)
-            self.agents[agent_id].critic_target.load_checkpoint(device = self.device, is_target = True, timestamp = self.model_timestamp)
+            self.agents[agent_id].actor.load_checkpoint(device = self.device, is_target = False, timestamp = self.model_timestamp, load_dir=load_dir)
+            self.agents[agent_id].actor_target.load_checkpoint(device = self.device, is_target = True, timestamp = self.model_timestamp, load_dir=load_dir)
+            self.agents[agent_id].critic.load_checkpoint(device = self.device, is_target = False, timestamp = self.model_timestamp, load_dir=load_dir)
+            self.agents[agent_id].critic_target.load_checkpoint(device = self.device, is_target = True, timestamp = self.model_timestamp, load_dir=load_dir)
 
         agent_id = list(self.dim_info.keys())[0]  # 获取第一个代理的 ID
         agent = self.agents[agent_id]

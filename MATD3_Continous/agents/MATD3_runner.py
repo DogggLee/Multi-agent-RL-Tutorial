@@ -87,16 +87,16 @@ class RUNNER:
         # 奖励记录保存为csv
         self.save_rewards_to_csv()   
 
-    def save_rewards_to_csv(self, prefix=''):
+    def save_rewards_to_csv(self, chkpt_dir, prefix=''):
         """移植自runner.py的保存方法"""
         timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M')
         filename = f"{prefix}rewards_{timestamp}.csv"
         
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        plot_dir = os.path.join(current_dir, '../plot/matd3_data')  # 调整保存路径
-        os.makedirs(plot_dir, exist_ok=True)
+        # current_dir = os.path.dirname(os.path.abspath(__file__))
+        # plot_dir = os.path.join(current_dir, '../plot/matd3_data')  # 调整保存路径
+        # os.makedirs(chkpt_dir, exist_ok=True)
         
-        with open(os.path.join(plot_dir, filename), 'w', newline='') as f:
+        with open(os.path.join(chkpt_dir, filename), 'w', newline='') as f:
             writer = csv.writer(f)
             header = ['Episode'] + list(self.episode_rewards.keys()) + ['Adversary_Mean']
             writer.writerow(header)
@@ -106,7 +106,7 @@ class RUNNER:
                 row += [self.episode_rewards[agent_id][ep] for agent_id in self.episode_rewards]
                 row.append(self.all_adversary_mean_rewards[ep] if ep < len(self.all_adversary_mean_rewards) else 0)
                 writer.writerow(row)
-        print(f"Data saved to {os.path.join(plot_dir, filename)}") 
+        print(f"Data saved to {os.path.join(chkpt_dir, filename)}") 
 
 #============================================================================================================
     def evaluate(self):
