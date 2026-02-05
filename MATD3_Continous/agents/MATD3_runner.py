@@ -6,10 +6,10 @@ from datetime import datetime
 import copy
 
 class RUNNER:
-    def __init__(self, agent, env, par, device, mode = 'evaluate'):
+    def __init__(self, agent, env, params, device, mode = 'evaluate'):
         self.agent = agent
         self.env = env
-        self.par = par
+        self.params = params
         # self.env_agents = {agent_id for agent_id in self.agent.agents.keys()} #  此处创建的是集合，顺序会出问题！ 三个小时花在这里了。。
         # print("self.env_agents:",self.env_agents)  # 此处打印顺序会乱
 
@@ -17,7 +17,7 @@ class RUNNER:
         self.done = {agent_id : False for agent_id in self.agent.agents.keys()} # 字典
         # print("self.env_agents:",self.env_agents)
 
-        self.best_score = self.par.best_score
+        self.best_score = self.params.best_score
         # 添加奖励记录相关的属性
         self.episode_rewards = {}  # 存储每个智能体的详细奖励历史
         self.all_adversary_mean_rewards = []   #添加新的列表来存储每轮 追捕者 的平均奖励
@@ -29,16 +29,19 @@ class RUNNER:
             agent.critic.to(device)
             agent.critic_target.to(device)
 
-    def train(self):
+    def train(self, exp_dir):
+        self.exp_dir = exp_dir
+        self.ckp_dir = os.path.join(exp_dir, 'ckp_models')
+        self.best_dir = os.path.join(exp_dir, 'best_score_models')
         step = 0
         # 记录每个智能体在每个episode的奖励
-        self.episode_rewards = {agent_id: np.zeros(self.par.episode_num) for agent_id in self.env.agents}
+        self.episode_rewards = {agent_id: np.zeros(self.params.episode_num) for agent_id in self.env.agents}
         self.all_adversary_mean_rewards = []  # 追捕者平均奖励记录
         # episode循环
-        for episode in range(self.par.episode_num):
+        for episode in range(self.params.episode_num):
             # print(f"This is episode {episode}")
             # 初始化环境 返回初始状态 为一个字典 键为智能体名字 即env.agents中的内容，内容为对应智能体的状态
-            obs, _ = self.env.reset(self.par.seed)
+            obs, _ = self.env.reset(self.params.seed)
             self.done = {agent_id : False for agent_id in self.env_agents}
             # 每个智能体当前episode的奖励
             agent_reward = {agent_id: 0 for agent_id in self.env_agents}
@@ -46,7 +49,7 @@ class RUNNER:
             # 每个智能体与环境进行交互
             while self.env.agents:  #  加入围捕判断
                 step += 1  # 此处记录的是并行 的step，即统一执行后，step+1
-                if step < self.par.random_steps:
+                if step < self.params.random_steps:
                     action = {agent_id: self.env.action_space(agent_id).sample() for agent_id in self.env.agents}
                 else:
                     action = self.agent.select_action(obs, explore=True, total_step=step, noise_type='gaussian') # 使用高斯噪声探索
@@ -58,9 +61,9 @@ class RUNNER:
                 for agent_id, r in reward.items():
                     agent_reward[agent_id] += r
 
-                if step >= self.par.random_steps and step % self.par.learn_interval == 0:
+                if step >= self.params.random_steps and step % self.params.learn_interval == 0:
                     # 更新网络
-                    self.agent.learn(self.par.batch_size, self.par.gamma) # 目标网络软更新放置在learn函数中，由policy_freq控制更新频率
+                    self.agent.learn(self.params.batch_size, self.params.gamma) # 目标网络软更新放置在learn函数中，由policy_freq控制更新频率
                 # 状态更新 - 创建深拷贝以避免引用问题
                 #obs = next_obs
                 obs = {k: v.copy() if hasattr(v, 'copy') else copy.deepcopy(v) for k, v in next_obs.items()}
@@ -75,7 +78,7 @@ class RUNNER:
 
             if adversary_mean > self.best_score:
                 print(f"New best score,{adversary_mean:>2f},>, {self.best_score:>2f}, saving models...")
-                self.agent.save_model(timestamp = False)  #存放在根目录
+                self.agent.save_model(timestamp = False, save_dir=self.best_dir)  #存放在根目录
                 self.best_score = adversary_mean
             # 打印进度
             if (episode + 1) % 100 == 0:  # 每100轮打印一次
@@ -84,8 +87,12 @@ class RUNNER:
                     message += f'{agent_id}: {r:>4f}; '
                 message += f'adversary_mean: {adversary_mean:>4f}'
                 print(message)
+
+                print("Save checkpoints")
+                self.agent.save_model(save_dir = self.ckp_dir)
+
         # 奖励记录保存为csv
-        self.save_rewards_to_csv()   
+        self.save_rewards_to_csv(self.exp_dir)   
 
     def save_rewards_to_csv(self, chkpt_dir, prefix=''):
         """移植自runner.py的保存方法"""
@@ -101,7 +108,7 @@ class RUNNER:
             header = ['Episode'] + list(self.episode_rewards.keys()) + ['Adversary_Mean']
             writer.writerow(header)
             
-            for ep in range(self.par.episode_num):
+            for ep in range(self.params.episode_num):
                 row = [ep + 1]
                 row += [self.episode_rewards[agent_id][ep] for agent_id in self.episode_rewards]
                 row.append(self.all_adversary_mean_rewards[ep] if ep < len(self.all_adversary_mean_rewards) else 0)
@@ -113,18 +120,18 @@ class RUNNER:
         """评估训练好的智能体"""
         print("evaluating...")
         # 添加胜率统计变量
-        total_episodes = self.par.evaluate_episode_num
+        total_episodes = self.params.evaluate_episode_num
         successful_captures = 0
         total_steps = 0
         capture_steps = []
 
         # 进行多次评估
-        for episode in range(self.par.evaluate_episode_num):
+        for episode in range(self.params.evaluate_episode_num):
             # 初始化环境
-            if self.par.use_variable_seeds:
-                obs, _ = self.env.reset(self.par.seed + episode)  # 使用不同的种子
+            if self.params.use_variable_seeds:
+                obs, _ = self.env.reset(self.params.seed + episode)  # 使用不同的种子
             else:
-                obs, _ = self.env.reset(self.par.seed)
+                obs, _ = self.env.reset(self.params.seed)
             self.done = {agent_id: False for agent_id in self.env_agents}
             # 每个智能体当前episode的奖励
             agent_reward = {agent_id: 0 for agent_id in self.env_agents}
@@ -195,4 +202,54 @@ class RUNNER:
         print(f"平均步数/轮: {avg_steps:.2f}")
         print(f"成功围捕平均步数: {avg_capture_steps:.2f}")
         print("=" * 20)
+
+
+class RecordingRunner(RUNNER):
+    def evaluate(self):
+        # 记录每个episode的和奖励 用于平滑，显示平滑奖励函数
+        self.reward_sum_record = []
+        # 记录每个智能体在每个episode的奖励
+        self.episode_rewards = {agent_id: np.zeros(self.params.episode_num) for agent_id in self.env.agents}
+        frames = []  # 用于存储渲染帧
         
+        # episode循环
+        for episode in range(self.params.episode_num):
+            step = 0  # 每回合step重置
+            print(f"评估第 {episode + 1} 回合")
+            # 初始化环境 返回初始状态
+            obs, _ = self.env.reset(seed=self.params.seed)  # 重置环境，开始新回合
+            self.done = {agent_id: False for agent_id in self.env_agents}
+            # 每个智能体当前episode的奖励
+            agent_reward = {agent_id: 0 for agent_id in self.env.agents}
+            
+            # 捕获初始帧
+            frame = self.env.render()
+            if frame is not None:
+                frames.append(frame)
+            
+            # 每个智能体与环境进行交互
+            while self.env.agents:
+                step += 1
+                # 使用训练好的智能体选择动作
+                action = self.agent.select_action(obs)
+                # 执行动作 获得下一状态 奖励 终止情况
+                next_obs, reward, terminated, truncated, info = self.env.step(action)
+                
+                # 捕获当前帧
+                frame = self.env.render()
+                if frame is not None:
+                    frames.append(frame)
+                
+                self.done = {agent_id: bool(terminated[agent_id] or truncated[agent_id]) for agent_id in self.env_agents}
+                # 累积每个智能体的奖励
+                for agent_id, r in reward.items():
+                    agent_reward[agent_id] += r
+                obs = next_obs
+                if step % 10 == 0:
+                    print(f"Step {step}, action: {action}, reward: {reward}, done: {self.done}")
+            
+            sum_reward = sum(agent_reward.values())
+            self.reward_sum_record.append(sum_reward)
+            print(f"回合 {episode + 1} 总奖励: {sum_reward}")
+        
+        return frames

@@ -10,7 +10,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from envs import simple_tag_env, custom_agents_dynamics
 
 from main_parameters import main_parameters, backup_yaml_config
-from agents.MATD3_runner import RUNNER
+from agents.MATD3_runner import RUNNER, RecordingRunner
 
 from agents.MATD3_agent import MATD3
 import torch
@@ -20,6 +20,8 @@ import numpy as np
 import time
 from datetime import datetime, timedelta
 from utils.logger import TrainingLogger  # 添加导入
+import imageio  # 需要安装: pip install imageio
+
 
 def setup_seed(seed):
     torch.manual_seed(seed)
@@ -110,10 +112,8 @@ if __name__ == '__main__':
     # 创建运行对象
     runner = RUNNER(agent, env, args, device, mode = 'train')
     
-    
-    
     # 开始训练
-    runner.train()
+    runner.train(exp_dir)
     
     # 记录训练结束时间和计算训练用时
     end_time = datetime.now()
@@ -132,8 +132,20 @@ if __name__ == '__main__':
     logger.save_training_log(args, device, start_time_str, end_time_str, training_duration, runner)
 
     print("--- saving trained models ---")
-    agent.save_model(timestamp = True)
+    agent.save_model(timestamp = False)
     print("--- trained models saved ---")
-    
 
+    rcd_runner = RecordingRunner(agent, env, args, device, mode='evaluate')
+    frames = rcd_runner.evaluate()
+    
+    # 创建保存目录(如果不存在)
+    plot_dir = os.path.join(exp_dir, 'plot')
+    os.makedirs(plot_dir, exist_ok=True)
+    
+    # 保存为GIF
+    gif_path = os.path.join(plot_dir, f'{args.env_name}_matd3_demo.gif')
+    print(f"正在保存GIF到: {gif_path}")
+    imageio.mimsave(gif_path, frames, fps=10)
+    
+    print(f'---- 完成! GIF已保存到 {gif_path} ----')
 

@@ -41,6 +41,7 @@ def main_parameters():
     
     parser.add_argument("--config", type=str, default=None, help="yaml配置文件路径（如config/train_config.yaml）")
     parser.add_argument("--seed", type=int, default=-1, help='随机种子 (使用-1表示不使用固定种子)')
+    parser.add_argument("--dump_root", type=str, default="checkpoints", help="None | human | rgb_array")
     parser.add_argument("--use_variable_seeds", type=bool, default=False, help="使用可变随机种子")
     parser.add_argument("--env_name", type=str, default="simple_tag_v3", help="name of the env",   
                         choices=['simple_adversary_v3', 'simple_spread_v3', 'simple_tag_v3', 'simple_tag_env']) 

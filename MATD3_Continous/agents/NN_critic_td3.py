@@ -46,14 +46,16 @@ class MLPNetworkCritic_td3(nn.Module):
         return self.net1(x)
     
 
-    def save_checkpoint(self, is_target = False, timestamp = False):
-        if timestamp is True:
-            # 使用时间戳创建新文件夹
-            current_timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M')
-            save_dir = os.path.join(self.chkpt_dir, current_timestamp)
-        else:
-            # 直接保存在主目录下
-            save_dir = self.chkpt_dir
+    def save_checkpoint(self, is_target=False, timestamp = False, save_dir=None):
+        if save_dir is None:
+            # 使用时间戳保存功能
+            if timestamp is True:
+                # 使用时间戳创建新文件夹
+                current_timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M')
+                save_dir = os.path.join(self.chkpt_dir, current_timestamp)
+            else:
+                # 直接保存在主目录下，不使用时间戳
+                save_dir = self.chkpt_dir
         
         self.chkpt_file = os.path.join(save_dir, self.chkpt_name)
 
@@ -65,13 +67,14 @@ class MLPNetworkCritic_td3(nn.Module):
             os.makedirs(os.path.dirname(self.chkpt_file), exist_ok=True)
             torch.save(self.state_dict(), self.chkpt_file)
 
-    def load_checkpoint(self, device = 'cpu', is_target = False, timestamp = None):
-        if timestamp and isinstance(timestamp, str):
-            # 如果提供了有效的时间戳字符串，从对应文件夹加载
-            load_dir = os.path.join(self.chkpt_dir, timestamp)
-        else:
-            # 否则从主目录加载
-            load_dir = self.chkpt_dir
+    def load_checkpoint(self, device = 'cpu', is_target = False, timestamp = None, load_dir=None): # 默认加载target
+        if load_dir is None:
+            if timestamp and isinstance(timestamp, str):
+                # 如果提供了有效的时间戳字符串，从对应文件夹加载
+                load_dir = os.path.join(self.chkpt_dir, timestamp)
+            else:
+                # 否则从主目录加载
+                load_dir = self.chkpt_dir
         
         self.chkpt_file = os.path.join(load_dir, self.chkpt_name)
 
