@@ -1,0 +1,14 @@
+# choices=['simple_adversary_v3', 'simple_spread_v3', 'simple_tag_v3', 'simple_tag_env']
+env_name: 'simple_adversary_v3'
+
+# choices=[null, 'human', 'rgb_array']
+render_mode: null
+
+episode_num: 1500
+episode_length: 150
+
+batch_size: 256
+actor_lr: 0.00001
+critic_lr: 0.0001
+comm_lr: 0.00001
+
