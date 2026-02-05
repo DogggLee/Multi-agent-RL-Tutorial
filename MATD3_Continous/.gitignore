@@ -7,4 +7,7 @@ models/matd3_models/*
 !models/matd3_models/2025-09-21_19-46/
 !models/matd3_models/2025-09-21_19-46/**
 
+checkpoints/*
+*/config/*
+
 
