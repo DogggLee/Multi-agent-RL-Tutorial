@@ -56,7 +56,7 @@ class Runner_MAPPO_MPE:
         self.timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M')
         print(f"训练开始时间戳: {self.timestamp}")
         # Create env
-        self.env, _, _ = get_env(env_name = 'simple_spread_v3', ep_len=self.args.episode_limit, N = self.number) # Continous action space
+        self.env, _, _ = get_env(env_name=env_name, ep_len=self.args.episode_limit, N = self.number) # Continous action space
         print("self.env.agents",self.env.agents)
         self.args.agents = self.env.agents
         self.args.N = len(self.env.agents)
@@ -95,6 +95,10 @@ class Runner_MAPPO_MPE:
     def run(self, ):
         evaluate_num = -1  # Record the number of evaluations
         while self.total_steps < self.args.max_train_steps:
+            print('='*20)
+            print(f"Episode {self.total_steps}/{self.args.max_train_steps}")
+            print('='*20)
+
             if self.total_steps // self.args.evaluate_freq > evaluate_num:
                 self.evaluate_policy()  # Evaluate the policy every 'evaluate_freq' steps
                 evaluate_num += 1
@@ -234,6 +238,9 @@ class Runner_MAPPO_MPE:
         
 if __name__ == '__main__':
     parser = argparse.ArgumentParser("Hyperparameters Setting for MAPPO in MPE environment")
+    parser.add_argument("--seed", type=int, default=23, help='随机种子 (使用-1表示不使用固定种子)')
+    parser.add_argument("--env_name", type=str, default="simple_tag_v3", help="name of the env",   
+                        choices=['simple_adversary_v3', 'simple_spread_v3', 'simple_tag_v3']) 
     parser.add_argument("--max_train_steps", type=int, default=int(2e5), help=" Maximum number of training steps")
     parser.add_argument("--episode_limit", type=int, default=100, help="Maximum number of steps per episode")
     parser.add_argument("--evaluate_freq", type=float, default=5000, help="Evaluate the policy every 'evaluate_freq' steps")
@@ -261,7 +268,18 @@ if __name__ == '__main__':
     parser.add_argument("--add_agent_id", type=float, default=False, help="Whether to add agent_id. Here, we do not use it.")
     parser.add_argument("--use_value_clip", type=float, default=False, help="Whether to use value clip.")
     parser.add_argument("--act_dim", type=float, default=5, help="Act_dimension") # 修改连续时添加
+    parser.add_argument("--device", type=str, default='gpu', help="训练设备，默认自动选择cpu")
 
     args = parser.parse_args()
-    runner = Runner_MAPPO_MPE(args, number=2, seed=23)
+    if args.seed == -1:
+        args.seed = None
+
+    device = torch.device('mps' if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available() 
+                            else 'cuda' if torch.cuda.is_available() else 'cpu')
+    if args.device == 'cpu':
+        device = torch.device('cpu')
+
+    args.device = device
+    
+    runner = Runner_MAPPO_MPE(args, number=2, seed=args.seed, env_name=args.env_name)
     runner.run()
