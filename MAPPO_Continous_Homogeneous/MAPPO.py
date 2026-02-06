@@ -168,11 +168,11 @@ class MAPPO_MPE:
 
         if self.use_rnn:
             print("------use rnn------")
-            self.actor = Actor_RNN(args, self.actor_input_dim)
-            self.critic = Critic_RNN(args, self.critic_input_dim)
+            self.actor = Actor_RNN(args, self.actor_input_dim).to(args.device)
+            self.critic = Critic_RNN(args, self.critic_input_dim).to(args.device)
         else:
-            self.actor = Actor_MLP(args, self.actor_input_dim)
-            self.critic = Critic_MLP(args, self.critic_input_dim)
+            self.actor = Actor_MLP(args, self.actor_input_dim).to(args.device)
+            self.critic = Critic_MLP(args, self.critic_input_dim).to(args.device)
 
         self.ac_parameters = list(self.actor.parameters()) + list(self.critic.parameters())
         if self.set_adam_eps:
