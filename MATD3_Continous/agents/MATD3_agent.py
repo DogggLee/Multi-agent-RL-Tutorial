@@ -179,9 +179,9 @@ class MATD3:
 
         agent_id = list(self.dim_info.keys())[0]  # 获取第一个代理的 ID
         agent = self.agents[agent_id]
-        for name, param in agent.actor.state_dict().items():
-        # 仅打印前几个值（例如前5个）
-            print(f"Layer: {name}, Shape: {param.shape}, Values: {param.flatten()[:5]}")  # flatten() 展开参数为一维数组
+        # for name, param in agent.actor.state_dict().items():
+        # # 仅打印前几个值（例如前5个）
+        #     print(f"Layer: {name}, Shape: {param.shape}, Values: {param.flatten()[:5]}")  # flatten() 展开参数为一维数组
 
 
     def load_model(self, load_dir=None):
@@ -193,7 +193,7 @@ class MATD3:
 
         agent_id = list(self.dim_info.keys())[0]  # 获取第一个代理的 ID
         agent = self.agents[agent_id]
-        for name, param in agent.actor.state_dict().items():
-        # 仅打印前几个值（例如前5个）
-            print(f"Layer: {name}, Shape: {param.shape}, Values: {param.flatten()[:5]}")  # flatten() 展开参数为一维数组
+        # for name, param in agent.actor.state_dict().items():
+        # # 仅打印前几个值（例如前5个）
+        #     print(f"Layer: {name}, Shape: {param.shape}, Values: {param.flatten()[:5]}")  # flatten() 展开参数为一维数组
   

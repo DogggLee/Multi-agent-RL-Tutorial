@@ -88,7 +88,7 @@ if __name__ == '__main__':
     # 模型保存路径
     current_dir = os.path.dirname(os.path.abspath(__file__))
     exp_dir = os.path.join(current_dir, "..", args.dump_root, args.env_name, start_time_str)
-    chkpt_dir = os.path.join(exp_dir, "models")
+    chkpt_dir = os.path.join(exp_dir, "lst_episode_models")
 
     backup_yaml_config(args.config, exp_dir)
 
@@ -110,7 +110,7 @@ if __name__ == '__main__':
                   _chkpt_dir = chkpt_dir, 
                   _device = device)
     # 创建运行对象
-    runner = RUNNER(agent, env, args, device, mode = 'train')
+    runner = RUNNER(agent, env, args, device)
     
     # 开始训练
     runner.train(exp_dir)
@@ -128,24 +128,18 @@ if __name__ == '__main__':
     print(f"训练设备: {device}")
 
     # 使用logger保存训练日志
-    logger = TrainingLogger(module_name = MODULE_NAME)
+    logger = TrainingLogger(log_dir=exp_dir, module_name = MODULE_NAME)
     logger.save_training_log(args, device, start_time_str, end_time_str, training_duration, runner)
 
     print("--- saving trained models ---")
     agent.save_model(timestamp = False)
     print("--- trained models saved ---")
 
-    rcd_runner = RecordingRunner(agent, env, args, device, mode='evaluate')
-    frames = rcd_runner.evaluate()
-    
-    # 创建保存目录(如果不存在)
-    plot_dir = os.path.join(exp_dir, 'plot')
-    os.makedirs(plot_dir, exist_ok=True)
-    
-    # 保存为GIF
-    gif_path = os.path.join(plot_dir, f'{args.env_name}_matd3_demo.gif')
-    print(f"正在保存GIF到: {gif_path}")
-    imageio.mimsave(gif_path, frames, fps=10)
-    
-    print(f'---- 完成! GIF已保存到 {gif_path} ----')
+    args.render_mode = "rgb_array"  # 修改为rgb_array以便捕获帧
+    env, dim_info, action_bound = get_env(args.env_name, args.episode_length, args.render_mode, seed = args.seed)
+    rcd_runner = RecordingRunner(agent, env, args, device)
+    rcd_runner.evaluate(runner.best_train_score_dir)
+    rcd_runner.evaluate(runner.best_eval_score_dir)
+    rcd_runner.evaluate(runner.best_capture_rate_dir)
+    rcd_runner.evaluate(runner.best_capture_steps_dir)
 

@@ -106,6 +106,7 @@ class Custom_raw_env(SimpleEnv, EzPickle):
             dtype = np.float32,
         )
 
+        self.screen = None
 
     def reset(self, seed=None, options=None):
         # 重置环境状态并清空轨迹记录
@@ -338,14 +339,15 @@ class Custom_raw_env(SimpleEnv, EzPickle):
                 3. 提供更好的用户体验（比如正确响应窗口关闭按钮）
                 所以建议保留这段事件处理代码，这样你的程序在任何平台上都能正常工作。
         """
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                return
-            if event.type == pygame.WINDOWCLOSE:
-                pygame.quit()
-                return
-        pygame.event.pump()  # 确保事件系统正常运行
+        if self.render_mode == 'human':
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    return
+                if event.type == pygame.WINDOWCLOSE:
+                    pygame.quit()
+                    return
+            pygame.event.pump()  # 确保事件系统正常运行
         #--------
         self.draw()
         if self.render_mode == "rgb_array":
@@ -433,7 +435,9 @@ class Custom_raw_env(SimpleEnv, EzPickle):
                 pygame.draw.circle(self.screen, (255, 255, 255), (int(x), int(y)), int(radius), 1) # 绘制边框
             else:  # Landmark
                 pygame.draw.circle(self.screen, (128, 128, 128), (int(x), int(y)), int(radius))
-        pygame.display.flip()
+        
+
+        # pygame.display.flip()
     
     """绘制坐标轴"""
     def draw_grid_and_axes(self):

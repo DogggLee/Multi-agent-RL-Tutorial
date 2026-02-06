@@ -57,15 +57,15 @@ class RecordingRunner(RUNNER):
         # 记录每个episode的和奖励 用于平滑，显示平滑奖励函数
         self.reward_sum_record = []
         # 记录每个智能体在每个episode的奖励
-        self.episode_rewards = {agent_id: np.zeros(self.par.episode_num) for agent_id in self.env.agents}
+        self.episode_rewards = {agent_id: np.zeros(self.params.episode_num) for agent_id in self.env.agents}
         frames = []  # 用于存储渲染帧
         
         # episode循环
-        for episode in range(self.par.episode_num):
+        for episode in range(self.params.episode_num):
             step = 0  # 每回合step重置
             print(f"评估第 {episode + 1} 回合")
             # 初始化环境 返回初始状态
-            obs, _ = self.env.reset(seed=self.par.seed)  # 重置环境，开始新回合
+            obs, _ = self.env.reset(seed=self.params.seed)  # 重置环境，开始新回合
             self.done = {agent_id: False for agent_id in self.env_agents}
             # 每个智能体当前episode的奖励
             agent_reward = {agent_id: 0 for agent_id in self.env.agents}
@@ -103,13 +103,13 @@ class RecordingRunner(RUNNER):
         return frames
 
 if __name__ == '__main__':
-    device = 'cpu'
-    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # device = 'cpu'
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Using device:", device)
     # 模型存储路径
     current_dir = os.path.dirname(os.path.abspath(__file__))
     chkpt_dir = os.path.join(current_dir, "..", 'models', 'matd3_models')
-    load_timestamp = "2025-09-21_19-46" # 替换时间戳
+    load_timestamp = "2026-02-04_14-03" # 替换时间戳
     model_timestamp = None if load_timestamp == '' else load_timestamp
     
     # 定义参数
@@ -131,19 +131,15 @@ if __name__ == '__main__':
     # 创建MATD3智能体
     agent = MATD3(dim_info, args.buffer_capacity, args.batch_size, args.actor_lr, args.critic_lr, action_bound, args.tau, _chkpt_dir=chkpt_dir, _model_timestamp=model_timestamp)
     print("--- Loading models ---")
-    agent.load_model()
+    agent.load_model(args.dump_root)
     print('---- Evaluating and Recording ----')
     
     # 使用修改后的Runner
-    runner = RecordingRunner(agent, env, args, device, mode='evaluate')
+    runner = RecordingRunner(agent, env, args, device)
     frames = runner.evaluate()
     
-    # 创建保存目录(如果不存在)
-    plot_dir = os.path.join(current_dir, '..', 'plot')
-    os.makedirs(plot_dir, exist_ok=True)
-    
     # 保存为GIF
-    gif_path = os.path.join(plot_dir, f'{args.env_name}_matd3_demo.gif')
+    gif_path = os.path.join(args.dump_root, f'{args.env_name}_matd3_demo.gif')
     print(f"正在保存GIF到: {gif_path}")
     imageio.mimsave(gif_path, frames, fps=10)
     

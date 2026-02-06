@@ -69,12 +69,14 @@ if __name__ == '__main__':
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     device = torch.device('mps' if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available() 
                             else 'cuda' if torch.cuda.is_available() else 'cpu')
-    device = "cpu"
+
+    breakpoint()
+    # device = "cpu"
     print("Using device:",device)
     start_time = time.time() # 记录开始时间
     # 模型保存路径
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    chkpt_dir = os.path.join(current_dir, "..", 'models', 'matd3_models')
+    exp_dir = os.path.join(current_dir, "..", 'models', 'matd3_models')
     # 定义参数
     args = main_parameters()
     # 创建环境
@@ -90,7 +92,7 @@ if __name__ == '__main__':
     env, dim_info, action_bound = get_env(args.env_name, args.episode_length, args.render_mode, seed = args.seed)
     # print(env, dim_info, action_bound)
     # 创建MA-DDPG智能体 dim_info: 字典，键为智能体名字 内容为二维数组 分别表示观测维度和动作维度 是观测不是状态 需要注意。
-    agent = MATD3(dim_info, args.buffer_capacity, args.batch_size, args.actor_lr, args.critic_lr, action_bound, args.tau, _chkpt_dir = chkpt_dir, _device = device)
+    agent = MATD3(dim_info, args.buffer_capacity, args.batch_size, args.actor_lr, args.critic_lr, action_bound, args.tau, _chkpt_dir = exp_dir, _device = device)
     # 创建运行对象
     runner = RUNNER(agent, env, args, device, mode = 'train')
     
