@@ -5,6 +5,8 @@ import threading
 from datetime import datetime
 import copy
 
+from tqdm import tqdm
+
 import imageio  # 需要安装: pip install imageio
 
 def tag_episode(episode, dir, message=''):
@@ -60,10 +62,7 @@ class RUNNER:
         self.all_capture_steps = []
 
         # episode循环
-        for episode in range(self.params.episode_num):
-            print('='*20)
-            print(f"Episode {episode}/{self.params.episode_num}")
-            print('='*20)
+        for episode in tqdm(range(self.params.episode_num)):
             # print(f"This is episode {episode}")
             # 初始化环境 返回初始状态 为一个字典 键为智能体名字 即env.agents中的内容，内容为对应智能体的状态
             obs, _ = self.env.reset(self.params.seed)
@@ -204,7 +203,7 @@ class RUNNER:
         total_rewards = 0.
 
         # 进行多次评估
-        for episode in range(self.params.evaluate_episode_num):
+        for episode in range(total_episodes):
             # 初始化环境
             if self.params.use_variable_seeds:
                 obs, _ = self.env.reset(self.params.seed + episode)  # 使用不同的种子
@@ -246,7 +245,7 @@ class RUNNER:
                 
                 # 检查是否达到最大步数
                 if episode_step >= self.params.evaluate_episode_length:
-                    print(f"评估 Episode {episode+1}: 达到最大步数 {self.params.episode_length}")
+                    print(f"Eval Episode {episode}/{total_episodes}: 达到最大步数 {self.params.episode_length}")
                     break
             
             # 计算追捕者平均奖励
@@ -258,7 +257,7 @@ class RUNNER:
             total_rewards += adversary_mean
 
             # # 打印每个评估episode的结果
-            print(f"\n评估 Episode {episode+1} 完成, 总步数: {episode_step}")
+            print(f"\nEval Episode {episode}/{total_episodes}: 总步数: {episode_step}")
             for agent_id, r in agent_reward.items():
                 print(f"{agent_id}: {r:.4f}", end="; ")
             print(f"追捕者平均: {adversary_mean:.4f}")
