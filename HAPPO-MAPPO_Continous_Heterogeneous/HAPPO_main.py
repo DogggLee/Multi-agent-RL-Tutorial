@@ -288,6 +288,10 @@ class Runner_MAPPO_MPE:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser("Hyperparameters Setting for HAPPO in MPE environment")
     parser.add_argument("--device", type=str, default='cpu', help="training device")
+    parser.add_argument("--seed", type=int, default=23, help="training device")
+
+    parser.add_argument("--env_name", type=str, default="simple_tag_v3", help="name of the env",   
+                        choices=['simple_adversary_v3', 'simple_spread_v3', 'simple_tag_v3']) 
     parser.add_argument("--max_train_steps", type=int, default=int(2e6), help="Maximum number of training steps")
     parser.add_argument("--episode_limit", type=int, default=100, help="Maximum number of steps per episode")
     parser.add_argument("--evaluate_freq", type=float, default=1000, help="Evaluate the policy every 'evaluate_freq' steps")
@@ -318,5 +322,13 @@ if __name__ == '__main__':
     parser.add_argument("--number", type=int, default=1, help="Experiment number")
 
     args = parser.parse_args()
-    runner = Runner_MAPPO_MPE(args, num_good=1, num_adversaries=3, seed=23, env_name="simple_tag_v3")
+
+    device = torch.device('mps' if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available() 
+                            else 'cuda' if torch.cuda.is_available() else 'cpu')
+    if args.device == 'cpu':
+        args.device = torch.device('cpu')
+    else:
+        args.device = device
+
+    runner = Runner_MAPPO_MPE(args, num_good=1, num_adversaries=3, seed=args.seed, env_name=args.env_name)
     runner.run()
