@@ -1,0 +1,47 @@
+experiment:
+  name: hunter_blocker_happo
+  run_root: runs
+
+env:
+  render_mode: "None"
+  episode_limit: 50
+  world_size: 2.5
+  num_hunters: 2
+  num_blockers: 1
+  num_targets: 1
+  num_obstacles: 0
+  capture_distance: 0.3
+  capture_steps: 5
+  hunter_speed: 1.2
+  blocker_speed: 1.0
+  target_speed: 1.0
+  hunter_view_range: 0.6
+  blocker_view_range: 1.0
+  target_view_range: 0.8
+
+train:
+  device: cpu
+  seed: 23
+  episodes: 10
+  batch_size: 4
+  mini_batch_size: 2
+  lr: 0.0005
+  gamma: 0.99
+  lamda: 0.95
+  epsilon: 0.2
+  K_epochs: 10
+  entropy_coef: 0.01
+  use_adv_norm: true
+  use_reward_norm: true
+  use_reward_scaling: false
+  add_agent_id: false
+  use_lr_decay: false
+  use_orthogonal_init: true
+  set_adam_eps: true
+
+validation:
+  num_episodes: 3
+  seed_start: 100
+  render_mode: "rgb_array"
+  max_steps: 100
+  gif_fps: 10
