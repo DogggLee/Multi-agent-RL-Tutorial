@@ -187,6 +187,7 @@ class HAPPO_MPE:
         self.agent_index = {}
         self.agents = {}  # 新的异构智能体字典
         self.dim_info = {}  # 存储每个智能体的维度信息
+        self.shared_policy_groups = getattr(args, 'shared_policy_groups', {})
         
         # 训练参数
         self.batch_size = args.batch_size
@@ -242,22 +243,27 @@ class HAPPO_MPE:
                 obs_dim = self.obs_dim  # 使用默认值
             self.dim_info[agent_id] = [obs_dim, self.action_dim]
 
-        # 创建异构智能体
+        # 创建异构智能体（支持共享策略）
+        shared_agents = {}
         for agent_id in self.all_agents:
             obs_dim = self.dim_info[agent_id][0]
             if self.add_agent_id:
                 obs_dim += self.N
-                
-            self.agents[agent_id] = Agent(
-                obs_dim=obs_dim,
-                action_dim=self.action_dim,
-                dim_info=self.dim_info,
-                actor_lr=self.lr,
-                critic_lr=self.lr,
-                is_continue=True,  # 连续动作空间
-                device=self.device,
-                trick=self.trick
-            )
+            group_key = self.shared_policy_groups.get(agent_id, agent_id)
+            if group_key in shared_agents:
+                self.agents[agent_id] = shared_agents[group_key]
+            else:
+                self.agents[agent_id] = Agent(
+                    obs_dim=obs_dim,
+                    action_dim=self.action_dim,
+                    dim_info=self.dim_info,
+                    actor_lr=self.lr,
+                    critic_lr=self.lr,
+                    is_continue=True,  # 连续动作空间
+                    device=self.device,
+                    trick=self.trick
+                )
+                shared_agents[group_key] = self.agents[agent_id]
 
         # 设置agent索引
         self.agent_index = {agent_id: idx for idx, agent_id in enumerate(self.all_agents)}
