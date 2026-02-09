@@ -1,0 +1,37 @@
+experiment:
+  name: hunter_blocker_maddpg
+  run_root: runs
+
+env:
+  env_name: hunter_blocker_env
+  render_mode: "None"
+  episode_length: 500
+  world_size: 2.5
+  num_hunters: 2
+  num_blockers: 1
+  num_targets: 1
+  num_obstacles: 0
+  capture_distance: 0.3
+  capture_steps: 5
+  hunter_speed: 1.2
+  blocker_speed: 1.0
+  target_speed: 1.0
+  hunter_view_range: 0.6
+  blocker_view_range: 1.0
+  target_view_range: 0.8
+
+train:
+  episode_num: 5
+  learn_interval: 10
+  random_steps: 500
+  tau: 0.001
+  gamma: 0.99
+  buffer_capacity: 1000000
+  batch_size: 128
+  actor_lr: 0.0002
+  critic_lr: 0.002
+  device: cpu
+
+log:
+  use_tensorboard: true
+  log_interval: 10

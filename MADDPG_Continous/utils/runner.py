@@ -5,11 +5,15 @@ import os
 import threading
 from datetime import datetime
 
+from torch.utils.tensorboard import SummaryWriter
+
 class RUNNER:
-    def __init__(self, agent, env, par, device, mode = 'evaluate'):
+    def __init__(self, agent, env, par, device, mode='evaluate', log_dir=None, use_tensorboard=False):
         self.agent = agent
         self.env = env
         self.par = par
+        self.log_dir = log_dir
+        self.writer = SummaryWriter(log_dir=log_dir) if use_tensorboard and log_dir else None
         # 这里为什么新建而不是直接使用用agent.agents.keys()？
         # 因为pettingzoo中智能体死亡，这个字典就没有了，会导致 td target更新出错。所以这里维护一个不变的字典。
         self.env_agents = [agent_id for agent_id in self.agent.agents.keys()]
@@ -98,10 +102,12 @@ class RUNNER:
             sum_reward = 0
             for agent_id, r in agent_reward.items():
                 sum_reward += r
-                if self.par.visdom:
-                    self.viz.line(X=[episode + 1], Y=[r], win='sum reward of the agent ' + str(agent_id),
-                             opts={'title': 'reward of the agent ' + str(agent_id) + ' in all episode'},
-                             update='append')
+            if self.par.visdom:
+                self.viz.line(X=[episode + 1], Y=[r], win='sum reward of the agent ' + str(agent_id),
+                         opts={'title': 'reward of the agent ' + str(agent_id) + ' in all episode'},
+                         update='append')
+                if self.writer:
+                    self.writer.add_scalar(f"reward/{agent_id}", r, episode + 1)
 
             '''
                 adversary_x:追捕者 
@@ -117,6 +123,8 @@ class RUNNER:
                 self.viz.line(X=[episode + 1], Y=[avg_adversary_reward], win='adversary average reward',
                          opts={'title': 'Average reward of adversaries'},
                          update='append')
+            if self.writer:
+                self.writer.add_scalar("reward/adversary_avg", avg_adversary_reward, episode + 1)
                 
             # 记录当前episode围捕者的平均奖励
             self.all_adversary_avg_rewards.append(avg_adversary_reward)
@@ -126,6 +134,8 @@ class RUNNER:
                 self.viz.line(X=[episode + 1], Y=[sum_reward], win='Sum reward of all agents',
                          opts={'title': 'Sum reward of all agents in all episode'},
                          update='append')
+            if self.writer:
+                self.writer.add_scalar("reward/sum", sum_reward, episode + 1)
                 
             # 记录当前episode的所有智能体和奖励 存储到csv中
             self.all_sum_rewards.append(sum_reward)
@@ -156,6 +166,9 @@ class RUNNER:
 
         # 保存数据到文件（CSV格式）
         self.save_rewards_to_csv(self.all_adversary_avg_rewards, self.all_sum_rewards)
+        if self.writer:
+            self.writer.flush()
+            self.writer.close()
 
     def get_running_reward(self, arr):
 
@@ -194,17 +207,18 @@ class RUNNER:
         return sma_rewards
     
     """保存围捕者平均奖励和所有智能体总奖励到 CSV 文件"""
-    def save_rewards_to_csv(self, adversary_rewards, sum_rewards, filename = None): # filename="data_rewards.csv"
+    def save_rewards_to_csv(self, adversary_rewards, sum_rewards, filename=None): # filename="data_rewards.csv"
         # 获取当前时间戳
         timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M')
         if filename is None:
             filename = f"data_rewards_{timestamp}.csv"
-        # 获取 runner.py 所在目录，并生成与 utils 同级的 plot 目录路径
-        current_dir = os.path.dirname(os.path.abspath(__file__))  # 获取当前文件（runner.py）的绝对路径
-        plot_dir = os.path.join(current_dir, '..', 'plot', 'data')  # 获取与 utils 同级的 plot 文件夹
-        os.makedirs(plot_dir, exist_ok=True)  # 创建 plot 目录（如果不存在）
+        if self.log_dir:
+            plot_dir = os.path.join(self.log_dir, "data")
+        else:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            plot_dir = os.path.join(current_dir, '..', 'plot', 'data')
+        os.makedirs(plot_dir, exist_ok=True)
 
-        # 构造完整的 CSV 文件路径
         full_filename = os.path.join(plot_dir, filename)
 
         header = ['Episode', 'Adversary Average Reward', 'Sum Reward of All Agents']
