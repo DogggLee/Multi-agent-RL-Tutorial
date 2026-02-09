@@ -11,10 +11,11 @@ from datetime import datetime
 
 """
 class TrainingLogger:
-    def __init__(self, log_dir="../logs"):
+    def __init__(self, log_dir=None):
         # 使用绝对路径
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        self.log_dir = os.path.join(current_dir,'..', 'logs')
+        default_dir = os.path.join(current_dir, '..', 'logs')
+        self.log_dir = log_dir or default_dir
         
         # 确保目录存在
         if not os.path.exists(self.log_dir):

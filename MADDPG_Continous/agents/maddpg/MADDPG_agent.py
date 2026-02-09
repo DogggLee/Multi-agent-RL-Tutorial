@@ -10,23 +10,53 @@ class MADDPG():
     # device = 'cpu'
     # device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    def __init__(self, dim_info, capacity, batch_size, actor_lr, critic_lr, action_bound, _chkpt_dir, _device = 'cpu', _model_timestamp = None):
+    def __init__(
+        self,
+        dim_info,
+        capacity,
+        batch_size,
+        actor_lr,
+        critic_lr,
+        action_bound,
+        _chkpt_dir,
+        _device='cpu',
+        _model_timestamp=None,
+        shared_policy_groups=None,
+    ):
         # 确保模型保存路径存在
         if _chkpt_dir is not None:
             os.makedirs(_chkpt_dir, exist_ok=True)
 
         self.device = _device
         self.model_timestamp = _model_timestamp
+        self.shared_policy_groups = shared_policy_groups or {}
         # 状态（全局观测）与所有智能体动作维度的和 即critic网络的输入维度  dim_info =  [obs_dim, act_dim]
         global_obs_act_dim = sum(sum(val) for val in dim_info.values())
         # 创建智能体与buffer，每个智能体有自己的buffer, actor, critic
         self.agents = {}
         self.buffers = {}
+        shared_agents = {}
         for agent_id, (obs_dim, act_dim) in dim_info.items():
-            # print("dim_info -> agent_id:",agent_id)
-            # 每一个智能体都是一个DDPG智能体
-            
-            self.agents[agent_id] = DDPG(obs_dim, act_dim, global_obs_act_dim, actor_lr, critic_lr, self.device, action_bound[agent_id], chkpt_name = (agent_id + '_'), chkpt_dir = _chkpt_dir)
+            group_key = self.shared_policy_groups.get(agent_id)
+            if group_key and group_key in shared_agents:
+                shared_agent = shared_agents[group_key]
+                self.agents[agent_id] = shared_agent
+            else:
+                chkpt_prefix = f"{group_key}_" if group_key else f"{agent_id}_"
+                self.agents[agent_id] = DDPG(
+                    obs_dim,
+                    act_dim,
+                    global_obs_act_dim,
+                    actor_lr,
+                    critic_lr,
+                    self.device,
+                    action_bound[agent_id],
+                    chkpt_name=chkpt_prefix,
+                    chkpt_dir=_chkpt_dir,
+                )
+                if group_key:
+                    shared_agents[group_key] = self.agents[agent_id]
+
             # buffer均只是存储自己的观测与动作
             self.buffers[agent_id] = BUFFER(capacity, obs_dim, act_dim, self.device)
         self.dim_info = dim_info
@@ -99,7 +129,7 @@ class MADDPG():
             for from_p, to_p in zip(from_network.parameters(), to_network.parameters()):
                 to_p.data.copy_(tau * from_p.data + (1.0 - tau) * to_p.data)
 
-        for agent in self.agents.values():
+        for agent in set(self.agents.values()):
             soft_update(agent.actor, agent.target_actor)  #体现使用嵌套函数的作用！ 易于维护和使用
             soft_update(agent.critic, agent.target_critic)
 
@@ -113,17 +143,17 @@ class MADDPG():
         return instance
     
     def save_model(self):
+        saved_groups = set()
         for agent_id in self.dim_info.keys():
-            self.agents[agent_id].actor.save_checkpoint(is_target = False, timestamp = True)
-            self.agents[agent_id].target_actor.save_checkpoint(is_target = True, timestamp = True)
-            self.agents[agent_id].critic.save_checkpoint(is_target = False, timestamp = True)
-            self.agents[agent_id].target_critic.save_checkpoint(is_target = True, timestamp = True)
-
-        agent_id = list(self.dim_info.keys())[0]  # 获取第一个代理的 ID
-        agent = self.agents[agent_id]
-        for name, param in agent.actor.state_dict().items():
-        # 仅打印前几个值（例如前5个）
-            print(f"Layer: {name}, Shape: {param.shape}, Values: {param.flatten()[:5]}")  # flatten() 展开参数为一维数组
+            agent = self.agents[agent_id]
+            group_key = self.shared_policy_groups.get(agent_id, agent_id)
+            if group_key in saved_groups:
+                continue
+            saved_groups.add(group_key)
+            agent.actor.save_checkpoint(is_target=False, timestamp=True)
+            agent.target_actor.save_checkpoint(is_target=True, timestamp=True)
+            agent.critic.save_checkpoint(is_target=False, timestamp=True)
+            agent.target_critic.save_checkpoint(is_target=True, timestamp=True)
 
 
     def load_model(self):
